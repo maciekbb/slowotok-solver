@@ -17170,8 +17170,6 @@ function printBoard(visited) {
 }
 
 function generateAllWords(word, i, j, letters, visited) {
-	var words = [];
-
 	function generateWordsForPosition(i, j) {
 		if(!visited[i][j]) { 
 			visited[i][j] = word.length + 1;
@@ -17227,12 +17225,9 @@ function generateAllWords(word, i, j, letters, visited) {
 	if(i > 0 && j > 0) {
 		generateWordsForPosition(i-1, j-1);
 	}
-
-	return words;
 }
 
 function generateForEeachStartingPoint(letters) {
-	var words = [];
 	var visited;
 
 	for(var i = 0; i < 4; i++) {
@@ -17244,6 +17239,6 @@ function generateForEeachStartingPoint(letters) {
 	}
 }
 
-letters = getAllLetters();
+var letters = getAllLetters();
 generateForEeachStartingPoint(letters);
 
