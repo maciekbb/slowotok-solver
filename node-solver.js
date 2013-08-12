@@ -4,7 +4,10 @@ var $ = require('jquery');
 
 var data = fs.readFileSync('words.txt', { encoding: 'utf-8'});
 var all_words = data.split("\n").map(function(o) { return o.trim(); }).sort();
-var found_words = [];
+
+var results = [];
+var min_length_to_show = 8;
+
 
 console.log("Words loaded!");
 
@@ -31,20 +34,27 @@ function isWord(word) {
 			if(all_words[mid] > word) {
 				b = mid - 1;
 			} else {
-				return true;
+				// found exact match
+				return 1; 
 			}
 			
 		}
 	}
-	return false;
+
+	if(all_words[a].match(word) || all_words[b].match(word)) {
+		// still a chance
+		return 0; 
+	} else {
+		return -1;
+	}
 }
 
 
-function printBoard(visited) {
+function printBoard(board) {
 	for(var i = 0; i < 4; i++) {
 		for(var j = 0; j < 4; j++) {
-			if(visited[i][j]) {
-				process.stdout.write(visited[i][j] + " ");
+			if(board[i][j]) {
+				process.stdout.write(board[i][j] + " ");
 			} else {
 				process.stdout.write("X ");
 			}
@@ -54,20 +64,35 @@ function printBoard(visited) {
 	process.stdout.write("----------\n");
 }
 
+function copyBoard(board) {
+	var newBoard = [];
+
+	for(var i = 0; i < 4; i++) {
+		newBoard.push([]);
+		for(var j = 0; j < 4; j++) {
+			newBoard[i][j] = board[i][j];
+		}
+	}
+
+	return newBoard;
+}
+
+
 function generateAllWords(word, i, j, letters, visited) {
 	function generateWordsForPosition(i, j) {
 		if(!visited[i][j]) { 
 			visited[i][j] = word.length + 1;
 
 			var new_word = word + letters[i][j];
+			var res = isWord(new_word);
 
-			if(isWord(new_word)) {
-				console.log(new_word);
-				printBoard(visited);
-				found_words.push(new_word);
+			if(res == 1) {
+				results.push({ 'word' : new_word, 'board' : copyBoard(visited) });
+			} 
+
+			if(res >= 0) {
+				generateAllWords(new_word, i, j, letters, visited);
 			}
-
-			generateAllWords(new_word, i, j, letters, visited);
 
 			visited[i][j] = false; 
 		}
@@ -121,26 +146,39 @@ function generateForEeachStartingPoint(letters) {
 	}
 }
 
-options = {
-    host: 'slowotok.pl',
-    port: 80,
-    path: '/play/board',
-    headers: {
-    	'Cookie' : '.ASPXAUTH=<YOUR COOKIE>'
-    }
-};
 
-var html = '';
-http.get(options, function(res) {
-    res.on('data', function(data) {
-        // collect the data chunks to the variable named "html"
-        html += data;
-    }).on('end', function() {
-        var letters = getAllLetters(html);
-        console.log("Got letters!");
-        console.log(letters);
-		generateForEeachStartingPoint(letters);
-		console.log("Found words:");
-		console.log(found_words.sort(function(a, b) { if(a.length >= b.length) return -1; else return 1; }).join(", "));
-     });
+function solve() {
+	options = {
+	    host: 'slowotok.pl',
+	    port: 80,
+	    path: '/play/board',
+	    headers: {
+	    	'Cookie' : '.ASPXAUTH=<YOUR COOKIE>'
+	    }
+	};
+
+	var html = '';
+	http.get(options, function(res) {
+	    res.on('data', function(data) {
+	        html += data;
+	    }).on('end', function() {
+	        var letters = getAllLetters(html);
+	        console.log("Got letters!");     
+	        console.log(letters);
+
+			generateForEeachStartingPoint(letters);
+			results = results.filter(function(o) { return o.word.length >= min_length_to_show }).sort(function(a, b) { if(a.word.length >= b.word.length) return -1; else return 1; });
+
+			for (var i = 0; i < results.length; i++) {
+				console.log(results[i].word);
+				printBoard(results[i].board);
+			};
+	     });
+	});
+}
+
+
+process.stdin.on('data', function (chunk) {
+	results = [];
+	solve();
 });
